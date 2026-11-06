@@ -1,0 +1,664 @@
+
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="public.master.cs" Inherits="BookNest._public" %>
+
+<script runat="server">
+    protected int GetCartCount()
+    {
+        if (Session["uid"] == null)
+        {
+            return 0;
+        }
+
+        string connectionString =
+            System.Configuration.ConfigurationManager
+            .ConnectionStrings["dbstring"].ConnectionString;
+
+        using (System.Data.SqlClient.SqlConnection connection =
+            new System.Data.SqlClient.SqlConnection(connectionString))
+        using (System.Data.SqlClient.SqlCommand command =
+            new System.Data.SqlClient.SqlCommand(
+                "SELECT ISNULL(SUM(Quantity), 0) FROM cart_tbl WHERE Cart_User_Id = @UserId",
+                connection))
+        {
+            command.Parameters.AddWithValue("@UserId", Session["uid"]);
+            connection.Open();
+
+            return System.Convert.ToInt32(command.ExecuteScalar());
+        }
+    }
+
+    protected string GetActiveClass(string pageName)
+    {
+        string currentPage =
+            System.IO.Path.GetFileName(Request.Url.AbsolutePath);
+
+        if (string.Equals(
+            currentPage,
+            pageName,
+            System.StringComparison.OrdinalIgnoreCase))
+        {
+            return "nav-link active";
+        }
+
+        return "nav-link";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRE Book Store</title>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+          rel="stylesheet" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        form#form1 {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main-container {
+            flex: 1;
+        }
+
+        .site-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            padding: 15px 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            color: #f59e0b;
+            font-size: 28px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 15px;
+            transition: color 0.2s ease;
+            position: relative;
+            padding: 5px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .nav-link:hover {
+            color: #d97706;
+        }
+
+        .nav-link.active {
+            color: #d97706;
+            font-weight: 600;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            display: block;
+            width: 22px;
+            height: 3px;
+            background-color: #f59e0b;
+            border-radius: 2px;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            color: #475569;
+            font-size: 18px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .action-btn:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .cart-btn {
+            position: relative;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: #f59e0b;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-buttons-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+        }
+
+        .btn-header-login {
+            color: #334155;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 7px 16px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-header-login:hover {
+            border-color: #d97706;
+            color: #d97706;
+            background-color: #fffbe6;
+        }
+
+        .btn-header-register {
+            background-color: #f5b738;
+            color: #1e293b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 8px 20px;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(245, 183, 56, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-header-register:hover {
+            background-color: #eab308;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 183, 56, 0.45);
+        }
+
+        .site-footer {
+            background-color: #0d1527;
+            color: #94a3b8;
+            padding: 55px 0 0 0;
+            margin-top: auto;
+            font-size: 14px;
+        }
+
+        .footer-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .footer-top-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr 0.8fr 1.6fr;
+            gap: 40px;
+            padding-bottom: 45px;
+        }
+
+        .footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .footer-logo-icon {
+            color: #f59e0b;
+            font-size: 32px;
+        }
+
+        .footer-logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+
+        .footer-tagline {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .footer-col-title {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .footer-links-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-links-list a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links-list a:hover {
+            color: #f59e0b;
+        }
+
+        .footer-social-icons {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .social-link {
+            color: #ffffff;
+            font-size: 18px;
+            text-decoration: none;
+            transition: color 0.2s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-link:hover {
+            color: #f59e0b;
+            transform: translateY(-2px);
+        }
+
+        .newsletter-desc {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .newsletter-form {
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            border-radius: 30px;
+            padding: 4px 4px 4px 18px;
+            max-width: 420px;
+        }
+
+        .newsletter-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 13px;
+            color: #1e293b;
+            font-family: inherit;
+            background: transparent;
+        }
+
+        .newsletter-input::placeholder {
+            color: #a1a1aa;
+        }
+
+        .newsletter-btn {
+            background-color: #f5b738;
+            color: #1e293b;
+            border: none;
+            outline: none;
+            border-radius: 25px;
+            padding: 10px 24px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .newsletter-btn:hover {
+            background-color: #eab308;
+        }
+
+        .footer-bottom-bar {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 22px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .footer-copyright {
+            color: #94a3b8;
+        }
+
+        .footer-legal-links {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .footer-legal-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-legal-links a:hover {
+            color: #ffffff;
+        }
+
+        .legal-divider {
+            color: #475569;
+        }
+
+        @media (max-width: 992px) {
+            .footer-top-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 30px;
+            }
+
+            .site-header {
+                padding: 15px 20px;
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .footer-top-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-bottom-bar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .auth-buttons-group span {
+                display: none;
+            }
+        }
+    </style>
+
+    <asp:ContentPlaceHolder ID="head" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+
+<body>
+    <form id="form1" runat="server">
+
+        <!-- Header -->
+        <header class="site-header">
+
+            <a href="<%= ResolveUrl("~/index.aspx") %>" class="header-logo">
+                <i class="fa-solid fa-book-open logo-icon"></i>
+                <span class="logo-text">MRE Book Store</span>
+            </a>
+
+            <!-- Navigation -->
+            <ul class="header-nav">
+                <li>
+                    <a href="<%= ResolveUrl("~/index.aspx") %>"
+                       class="<%= GetActiveClass("index.aspx") %>">Home</a>
+                </li>
+                <li>
+                    <a href="<%= ResolveUrl("~/Books.aspx") %>"
+                       class="<%= GetActiveClass("Books.aspx") %>">Books</a>
+                </li>
+                <li>
+                    <a href="<%= ResolveUrl("~/Categories.aspx") %>"
+                       class="<%= GetActiveClass("Categories.aspx") %>">Categories</a>
+                </li>
+                <li>
+                    <a href="<%= ResolveUrl("~/Contact.aspx") %>"
+                       class="<%= GetActiveClass("Contact.aspx") %>">Contact</a>
+                </li>
+            </ul>
+
+            <!-- Search, Cart and Authentication -->
+            <div class="header-actions">
+
+                <button type="button" class="action-btn" title="Search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+
+                <a href="<%= ResolveUrl("~/Cart.aspx") %>"
+                   class="action-btn cart-btn" title="Cart">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart-badge"><%= GetCartCount() %></span>
+                </a>
+
+                <!-- ONLY ONE authentication section -->
+                <div class="auth-buttons-group">
+
+                    <% if (Session["admin"] != null &&
+                           Session["admin"].ToString() == "true") { %>
+
+                        <a href="<%= ResolveUrl("~/admindashboard.aspx") %>"
+                           class="btn-header-login" title="Admin Dashboard">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Dashboard</span>
+                        </a>
+
+                        <a href="<%= ResolveUrl("~/Login.aspx?logout=1") %>"
+                           class="btn-header-register" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </a>
+
+                    <% } else if (Session["uid"] != null) { %>
+
+                        <a href="<%= ResolveUrl("~/index.aspx") %>"
+                           class="btn-header-login" title="User Dashboard">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Dashboard</span>
+                        </a>
+
+                        <a href="<%= ResolveUrl("~/Login.aspx?logout=1") %>"
+                           class="btn-header-register" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </a>
+
+                    <% } else { %>
+
+                        <a href="<%= ResolveUrl("~/Login.aspx") %>"
+                           class="btn-header-login" title="Login">
+                            <i class="fa-regular fa-user"></i>
+                            <span>Login</span>
+                        </a>
+
+                        <a href="<%= ResolveUrl("~/Register.aspx") %>"
+                           class="btn-header-register" title="Register">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Register</span>
+                        </a>
+
+                    <% } %>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-container container">
+            <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server">
+            </asp:ContentPlaceHolder>
+
+            <asp:ContentPlaceHolder ID="ContentPlaceHolder2" runat="server">
+            </asp:ContentPlaceHolder>
+
+            <asp:ContentPlaceHolder ID="ContentPlaceHolder3" runat="server">
+            </asp:ContentPlaceHolder>
+        </div>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+            <div class="footer-container">
+
+                <div class="footer-top-grid">
+
+                    <div class="footer-brand">
+                        <a href="<%= ResolveUrl("~/index.aspx") %>" class="footer-logo">
+                            <i class="fa-solid fa-book-open footer-logo-icon"></i>
+                            <span class="footer-logo-text">MRE Book Store</span>
+                        </a>
+                        <p class="footer-tagline">Books make life better.</p>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4 class="footer-col-title">Quick Links</h4>
+                        <ul class="footer-links-list">
+                            <li><a href="<%= ResolveUrl("~/index.aspx") %>">Home</a></li>
+                            <li><a href="<%= ResolveUrl("~/Books.aspx") %>">Books</a></li>
+                            <li><a href="<%= ResolveUrl("~/Categories.aspx") %>">Categories</a></li>
+                            <li><a href="<%= ResolveUrl("~/Contact.aspx") %>">Contact</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4 class="footer-col-title">Follow Us</h4>
+                        <div class="footer-social-icons">
+                            <a href="#" class="social-link" title="Facebook">
+                                <i class="fa-brands fa-facebook-f"></i>
+                            </a>
+                            <a href="#" class="social-link" title="Instagram">
+                                <i class="fa-brands fa-instagram"></i>
+                            </a>
+                            <a href="#" class="social-link" title="Twitter">
+                                <i class="fa-brands fa-x-twitter"></i>
+                            </a>
+                            <a href="#" class="social-link" title="YouTube">
+                                <i class="fa-brands fa-youtube"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4 class="footer-col-title">Subscribe to our Newsletter</h4>
+                        <p class="newsletter-desc">
+                            Get the latest books, offers and updates.
+                        </p>
+                        <div class="newsletter-form">
+                            <input type="email"
+                                   class="newsletter-input"
+                                   placeholder="Enter your email address" />
+                            <button type="button" class="newsletter-btn">
+                                Subscribe
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="footer-bottom-bar">
+                    <span class="footer-copyright">
+                        &copy; 2025 MRE Book Store. All rights reserved.
+                    </span>
+                </div>
+
+            </div>
+        </footer>
+
+    </form>
+
+    <!-- Active Navigation Highlight -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var path = window.location.pathname.toLowerCase();
+            var links = document.querySelectorAll(".header-nav .nav-link");
+
+            links.forEach(function (link) {
+                var href = new URL(link.href, window.location.href)
+                    .pathname.toLowerCase();
+
+                if (path === href ||
+                    (href.endsWith("/index.aspx") &&
+                        (path.endsWith("/") || path.endsWith("/default.aspx")))) {
+                    link.classList.add("active");
+                } else {
+                    link.classList.remove("active");
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
